@@ -1,16 +1,20 @@
 package redis
 
-import "github.com/go-redis/redis"
+import (
+	"daisy/logger"
+	"github.com/go-redis/redis"
+)
 
-func InitByUrl(url string) *redis.Client {
+func New(url string) *redis.Client {
 	opt, err := redis.ParseURL(url)
 	if err != nil {
-		panic(err)
+		logger.Error("解析链接字符串", url, "失败:", err.Error())
 	}
 	client := redis.NewClient(opt)
 	_, err = client.Ping().Result()
 	if err != nil {
-		panic(err)
+		logger.Error("连接", url, "失败:", err.Error())
 	}
+	logger.Info("连接到:", url)
 	return client
 }
