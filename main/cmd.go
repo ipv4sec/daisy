@@ -64,11 +64,9 @@ func main() {
 					logger.Error("获取STRING键", result[i], "错误:", err.Error())
 					break
 				}
-				if expireAt >= 0 {
-					_, err = target.Set(result[i], value, expireAt).Result()
-					if err != nil {
-						logger.Error("保存", result[i], "错误:", err.Error())
-					}
+				_, err = target.Set(result[i], value, expireAt).Result()
+				if err != nil {
+					logger.Error("保存", result[i], "错误:", err.Error())
 				}
 			case redis.TYPE_SET:
 				expireAt, err := source.TTL(result[i]).Result()
