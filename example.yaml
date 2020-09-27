@@ -1,0 +1,14 @@
+
+source:
+  host:
+    - 192.168.64.101:63790
+  auth: Artron123
+  database: 0
+  prefix: 'Miss:You:'
+
+target:
+  host:
+    - 192.168.64.101:63790
+  auth: Artron123
+  database: 0
+  prefix: 'Love:You:'

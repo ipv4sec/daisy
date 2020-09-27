@@ -1,52 +1,53 @@
 package main
 
 import (
+	"daisy/config"
 	"daisy/logger"
 	"daisy/redis"
 	"flag"
+	"fmt"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
 	"strings"
 	"time"
 )
 
 var (
-	sourceURL string
-	targetURL string
-	countNum int64
-
-	oldPrefixStr string
-	newPrefixStr string
+	conf string
+	c config.Config
 )
 
 func init() {
-	//flag.StringVar(&sourceURL, "s", "redis://localhost:6379/0", "Source")
-	//flag.StringVar(&targetURL, "t", "redis://user:passwd@localhost:6379/0", "Target")
-
-	flag.StringVar(&sourceURL, "s", "redis://localhost:6379/0", "来源数据库")
-	flag.StringVar(&targetURL, "t", "redis://localhost:6379/3", "目的数据库")
-	flag.Int64Var(&countNum, "n", 1000, "每次扫描数量")
-
-	flag.StringVar(&oldPrefixStr, "op", "", "迁移匹配格式")
-	flag.StringVar(&newPrefixStr, "np", "", "迁移匹配格式")
-	// Redis TTL的值 和 Expire 的秒数不是同一个东西
+	flag.StringVar(&conf, "conf", "example.yaml", "配置文件")
 }
 func main() {
 	flag.Parse()
-
+	bytes, err := ioutil.ReadFile(conf)
+	if err != nil {
+		panic(err)
+	}
+	err = yaml.Unmarshal(bytes, &c)
+	if err != nil {
+		panic(err)
+	}
+	sourceURL := fmt.Sprintf(
+		"redis://:%s@%s/%v", c.Source.Auth, strings.Join(c.Source.Host, ","), c.Source.Database)
+	targetURL := fmt.Sprintf(
+		"redis://:%s@%s/%v", c.Source.Auth, strings.Join(c.Source.Host, ","), c.Source.Database)
 	source := redis.New(sourceURL)
 	target := redis.New(targetURL)
 
-	var cursor uint64
-	var err error
-
-	cursor = 0
-
+	cursor := uint64(0)
+	startAt := time.Now()
 	for {
 		var result []string
-		result, cursor, err = source.Scan(cursor, oldPrefixStr + "*", countNum).Result() // Redis >= 2.8
+		result, cursor, err = source.Scan(cursor, c.Source.Prefix + "*", 1000).Result() // Redis >= 2.8
 		if err != nil {
 			logger.Error("遍历键名错误:", err)
 		}
-		logger.Info("此次迁移数量:", len(result))
+		if len(result) != 0 {
+			logger.Info("此次迁移数量:", len(result))
+		}
 		for i := 0; i < len(result); i++ {
 			t, err := source.Type(result[i]).Result()
 			if err != nil {
@@ -69,7 +70,7 @@ func main() {
 					logger.Error("获取STRING键", result[i], "错误:", err.Error())
 					break
 				}
-				newKeyName := strings.Replace(result[i], oldPrefixStr, newPrefixStr, 1)
+				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
 				_, err = target.Set(newKeyName, value, expireAt).Result()
 				if err != nil {
 					logger.Error("保存", newKeyName, "错误:", err.Error())
@@ -88,7 +89,7 @@ func main() {
 					logger.Error("获取SET键", result[i], "错误:", err.Error())
 					break
 				}
-				newKeyName := strings.Replace(result[i], oldPrefixStr, newPrefixStr, 1)
+				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix,1)
 				_, err = target.SAdd(newKeyName, value).Result()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
@@ -118,7 +119,7 @@ func main() {
 					logger.Error("获取ZSET键", result[i], "失败:", err.Error())
 					break
 				}
-				newKeyName := strings.Replace(result[i], oldPrefixStr, newPrefixStr, 1)
+				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
 				_, err = target.ZAdd(newKeyName, value...).Result()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
@@ -152,7 +153,7 @@ func main() {
 				for k, v := range value {
 					val[k] = v
 				}
-				newKeyName := strings.Replace(result[i], oldPrefixStr, newPrefixStr, 1)
+				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
 				_, err = target.HMSet(newKeyName, val).Result()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
@@ -185,7 +186,7 @@ func main() {
 				for i, j := 0, len(value)-1; i < j; i, j = i+1, j-1 {
 					value[i], value[j] = value[j], value[i]
 				}
-				newKeyName := strings.Replace(result[i], oldPrefixStr, newPrefixStr, 1)
+				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
 				_, err = target.LPush(newKeyName, value).Result()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
@@ -205,7 +206,7 @@ func main() {
 		}
 
 		if cursor == 0 {
-			logger.Info("迁移结束")
+			logger.Info(fmt.Sprintf("迁移完成, 用时 %v", time.Since(startAt)))
 			break
 		}
 	}
