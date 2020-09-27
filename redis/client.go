@@ -11,7 +11,7 @@ func New(url string) *redis.Client {
 		logger.Error("解析链接字符串", url, "失败:", err.Error())
 	}
 	client := redis.NewClient(opt)
-	_, err = client.Ping().Result()
+	err = client.Ping().Err()
 	if err != nil {
 		logger.Error("连接", url, "失败:", err.Error())
 	}

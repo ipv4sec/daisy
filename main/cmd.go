@@ -89,7 +89,7 @@ func main() {
 					break
 				}
 				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix,1)
-				_, err = target.SAdd(newKeyName, value).Result()
+				err = target.SAdd(newKeyName, value).Err()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
 					break
