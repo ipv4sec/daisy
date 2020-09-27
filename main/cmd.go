@@ -61,8 +61,7 @@ func main() {
 					logger.Error("获取", result[i], "的过期时间错误", err.Error())
 					break
 				}
-				if expireAt == -2  * time.Second {
-					// Redis >= 2.8
+				if expireAt == -2 {
 					break
 				}
 				value, err := source.Get(result[i]).Result()
@@ -71,7 +70,7 @@ func main() {
 					break
 				}
 				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
-				_, err = target.Set(newKeyName, value, expireAt).Result()
+				err = target.Set(newKeyName, value, expireAt).Err()
 				if err != nil {
 					logger.Error("保存", newKeyName, "错误:", err.Error())
 				}
@@ -81,7 +80,7 @@ func main() {
 					logger.Error("获取", result[i], "的过期时间错误", err.Error())
 					break
 				}
-				if expireAt == -2  * time.Second {
+				if expireAt == -2 {
 					break
 				}
 				value, err := source.SMembers(result[i]).Result()
@@ -111,7 +110,7 @@ func main() {
 					logger.Error("获取", result[i], "的过期时间错误", err.Error())
 					break
 				}
-				if expireAt == -2  * time.Second  {
+				if expireAt == -2  {
 					break
 				}
 				value, err := source.ZRangeWithScores(result[i], 0, -1).Result()
@@ -120,7 +119,7 @@ func main() {
 					break
 				}
 				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
-				_, err = target.ZAdd(newKeyName, value...).Result()
+				err = target.ZAdd(newKeyName, value...).Err()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
 					break
@@ -141,7 +140,7 @@ func main() {
 					logger.Error("获取", result[i], "的过期时间错误", err.Error())
 					break
 				}
-				if expireAt == -2  * time.Second {
+				if expireAt == -2 {
 					break
 				}
 				value, err := source.HGetAll(result[i]).Result()
@@ -154,7 +153,7 @@ func main() {
 					val[k] = v
 				}
 				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
-				_, err = target.HMSet(newKeyName, val).Result()
+				err = target.HMSet(newKeyName, val).Err()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
 					break
@@ -175,7 +174,7 @@ func main() {
 					logger.Error("获取", result[i], "的过期时间错误", err.Error())
 					break
 				}
-				if expireAt == -2 * time.Second {
+				if expireAt == -2 {
 					break
 				}
 				value, err := source.LRange(result[i], 0, -1).Result()
@@ -187,7 +186,7 @@ func main() {
 					value[i], value[j] = value[j], value[i]
 				}
 				newKeyName := strings.Replace(result[i], c.Source.Prefix, c.Target.Prefix, 1)
-				_, err = target.LPush(newKeyName, value).Result()
+				err = target.LPush(newKeyName, value).Err()
 				if err != nil {
 					logger.Error("保存", newKeyName, "失败:", err.Error())
 					break
