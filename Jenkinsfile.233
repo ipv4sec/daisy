@@ -1,0 +1,16 @@
+
+pipeline{
+    agent any
+    triggers{
+        gitlab(
+        triggerOnPush: true
+        )
+    }
+    stages{
+        stage('构建'){
+            steps{
+                echo "gitlab 触发"
+            }
+        }
+    }
+}
